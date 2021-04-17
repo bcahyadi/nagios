@@ -17,25 +17,24 @@ echo " "
 read -p "Press any key to continue or ctrl-C to abort..."
 
 useradd nagios
-passwd nagios
 groupadd nagcmd
 usermod -a -G nagcmd nagios
-usermod -a -G nagcmd apache
 cd /opt
 wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.6.tar.gz
 tar xzf nagios-4.4.6.tar.gz
 cd nagios-4.4.6
 ./configure --with-command-group=nagcmd
 make all
-make install
-make install-init
-make install-daemoninit
-make install-config
-make install-commandmode
-make install-exfoliation
-make install-webconf
-htpasswd -c -b /usr/local/nagios/etc/htpasswd.users nagiosadmin 4dm1nNAGIOS
-service httpd restart
+sudo make install
+sudo make install-commandmode
+sudo make install-init
+sudo make install-config
+sudo make install-webconf
+
+usermod -G nagcmd apache
+
+
+
 cd /opt
 wget http://nagios-plugins.org/download/nagios-plugins-2.2.1.tar.gz
 tar xzf nagios-plugins-2.2.1.tar.gz
@@ -44,6 +43,16 @@ cd nagios-plugins-2.2.1
 make
 make install
 
+#install nrpe
+wget https://sourceforge.net/projects/nagios/files/nrpe-4.x/nrpe-4.0.3/nrpe-4.0.3.tar.gz
+tar xvf nrpe-*.tar.gz
+cd nrpe-*
+./configure --enable-command-args --with-nagios-user=nagios --with-nagios-group=nagios --with-ssl=/usr/bin/openssl --with-ssl-lib=/usr/lib/x86_64-linux-gnu
+make all
+sudo make install
+sudo make install-xinetd
+sudo make install-daemon-config
+service nrpe restart
 
 # upgrade cURL
 echo"download curl installer"
@@ -55,6 +64,10 @@ yum --enablerepo=city-fan.org update curl -y
 echo "Checking Nagios Config"
 echo "make sure no warning or no error"
 /usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg
+
+htpasswd -c -b /usr/local/nagios/etc/htpasswd.users nagiosadmin 4dm1nNAGIOS
+service daemon-reload
+service httpd restart
 service nagios start
 
 chkconfig --add nagios
